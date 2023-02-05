@@ -1,0 +1,222 @@
+---
+  title: "Visualizing the Effects of the Economic Crisis on Cultural Consumption in Southern Europe"
+  author: "Omar Lizardo"
+  date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+    knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+    library(ggplot2)
+    library(haven)
+    library(here)
+    library(likert)
+    library(patchwork)
+    library(tidyverse)
+    library(wesanderson)
+    #source(here("R", "Functions", "gen.country.dat.R"))
+    #source(here("R", "Functions", "gen.dat.R"))
+```
+# Data Wrangling
+```{r Reading in Data (2007)}
+    eurobar.07 <- read_dta(
+        "C:/Users/Omar Lizardo/Google Drive/MISC DATA SOURCES/Eurobarometer-67-1/eurobar67-1.dta",
+        col_select = c(V6, V94:V96, V98:V103, V724, V725, V726, V727)) %>% 
+        rename(country = V6,
+               dance = V94,
+               seemovie = V95,
+               drama = V96,
+               concert = V98,
+               library = V99,
+               histmon = V100,
+               visitart = V101,
+               tvradio = V102,
+               readbook = V103,
+               educage = V724,
+               educrec = V725,
+               gender = V726,
+               age = V727
+               ) %>%
+        mutate(educrec = as_factor(educrec),
+               educrec = fct_recode(educrec,
+                 "Up to 15" = "Up to 14 years",
+                 "Up to 15" = "15 years",
+                 "16-19" = "16 years",
+                 "16-19" = "17 years",
+                 "16-19" = "18 years",
+                 "16-19" = "19 years",
+                 "20+" = "20 years",
+                 "20+" = "21 years",
+                 "20+" = "22 years and older",
+                 "Up to 15" = "No full-time education",
+                 "Up to 15" = "DK"),
+               across(dance:readbook, as_factor),
+               across(dance:readbook, function(x) {fct_recode(x,
+                                                              "Never" = "Never in the last twelve months", "Never" = "DK")}),
+               year = "2007")
+```
+
+```{r Reading in Data (2013)}
+    eurobar.13 <- read_dta(
+        "C:/Users/Omar Lizardo/Google Drive/MISC DATA SOURCES/Eurobarometer-79-2/eurobar79-2.dta",
+        col_select = c(COUNTRY, starts_with("QB1_"), D8, D8R2, D10, D11)) %>% 
+        rename(country = COUNTRY,
+               dance = QB1_1,
+               seemovie = QB1_2,
+               drama = QB1_3,
+               concert = QB1_4,
+               library = QB1_5,
+               histmon = QB1_6,
+               visitart = QB1_7,
+               tvradio = QB1_8,
+               readbook = QB1_9,
+               educage = D8,
+               educrec = D8R2,
+               gender = D10,
+               age = D11
+               ) %>%
+        mutate(educrec = as_factor(educrec),
+              educrec = fct_recode(educrec,
+                "Still studying" = "Still Studying",
+                 "Up to 15" = "Refusal",
+                 "Up to 15" = "No full-time education",
+                 "Up to 15" = "DK"),
+        across(dance:readbook, as_factor),
+               across(dance:readbook, function(x) {fct_recode(x,
+                                                              "Never" = "Not in the last 12 months", "Never" = "DK")}),
+              year = "2013")
+```
+
+```{r Merging Data}
+    eurobar <- bind_rows(eurobar.07, eurobar.13) %>% 
+                    mutate(year = factor(year)) %>% 
+                    #mutate(across(dance:readbook, function(x) ♦{na_if(x, 9)})) %>%
+                    mutate(country = as_factor(country)) %>% 
+                    mutate(country = fct_recode(country, 
+                          "Germany" = "Germany East",
+                          "Germany" = "Germany West",
+                          "U.K" = "Great Britain",
+                          "U.K" = "Northern Ireland")) %>% 
+                filter(country %in% 
+                            c("Spain", "Portugal", "Italy", "Greece")) %>% 
+                mutate(country = droplevels(country)) %>% 
+                mutate(across(dance:readbook, droplevels))
+      summary(eurobar)
+```
+
+```{r Binarized and scaled data}
+    eurobar.bin <- eurobar %>% 
+      mutate(across(dance:readbook, function(x) {if_else(x == "Never", 0, 1)}),
+             cult.sum1 = rowSums(across(dance:readbook)),
+             cult.cat1 = case_when(cult.sum1 == 0 ~ 1,
+                                  cult.sum1 %in% 1:2 ~ 2,
+                                  cult.sum1 %in% 3:4 ~ 3,
+                                  cult.sum1 %in% 5:6 ~ 4,
+                                  cult.sum1 >=7 ~ 5
+                                  ),
+             cult.sum2 = rowSums(across(c(dance:concert, histmon:visitart))),
+             cult.cat2 = case_when(cult.sum2 == 0 ~ 1,
+                                  cult.sum2 %in% 1:2 ~ 2,
+                                  cult.sum2 %in% 3:4 ~ 3,
+                                  cult.sum2 %in% 5:6 ~ 4
+                                  ),
+             cult.cat1 = factor(cult.cat1, labels = c("0", "1-2", "3-4", "5-6", "7-9")),
+             cult.cat2 = factor(cult.cat2, labels = c("0", "1-2", "3-4", "5-6")),
+             across(dance:readbook, function(x) {factor(x, labels = c("No", "Yes"))})
+             ) %>% 
+        na.omit()
+    summary(eurobar.bin)
+```
+
+# Plots
+
+```{r Likert plot by country/year}
+     plot.dat <- filter(eurobar.bin, year == 2007) %>% 
+          select(country, cult.cat1)
+     names(plot.dat) <- c("Country", "2007")
+     plot.dat <- likert(plot.dat[2], grouping = plot.dat$Country)
+     p <- plot(plot.dat, center = 3, 
+               colors = wes_palette("Royal2"),
+               text.size = 4.5)
+     p <- p + theme_minimal() 
+     p1 <- p + theme(legend.position = "none")
+     
+     plot.dat <- filter(eurobar.bin, year == 2013) %>% 
+          select(country, cult.cat1)
+     names(plot.dat) <- c("Country", "2013")
+     plot.dat <- likert(plot.dat[2], grouping = plot.dat$Country)
+     p <- plot(plot.dat, center = 3, 
+               colors = wes_palette("Royal2"),
+               text.size = 4.5) 
+     p <- p + theme_minimal() 
+     p2 <- p + theme(legend.position = "none", 
+                     axis.line.y = element_blank(),
+                     axis.text.y = element_blank())
+     p.list <- list(p1, p2)
+     p.main <- wrap_plots(p.list, nrow = 1) &
+               theme(axis.title.x = element_blank(),
+               axis.text = element_text(size = 16),
+               strip.text = element_text(size = 20))
+```
+
+```{r Multiple plots function}
+     likert.country.plot <- function(w, ts = 4, c = 2, pal = "Moonrise3") {
+          plot.dat.07 <- filter(eurobar.bin, year == 2007 & country == w) %>% 
+               select(cult.cat1, educrec)
+          plot.dat.13 <- filter(eurobar.bin, year == 2013 & country == w) %>% 
+               select(cult.cat1, educrec)
+
+          names(plot.dat.07) <- c("2007", "educrec")
+          names(plot.dat.13) <- c("2013", "educrec")
+
+          plot.dat.07 <- likert(plot.dat.07[1], grouping = plot.dat.07$educrec)
+          plot.dat.13 <- likert(plot.dat.13[1], grouping = plot.dat.13$educrec)
+
+          p <- plot(plot.dat.07, center = c, 
+                    colors = wes_palette(pal),
+                    text.size = ts) 
+          p <- p + theme_minimal() 
+          p <- p + ggtitle(w)
+          p1 <- p + theme(legend.position = "none",
+                          plot.title = element_text(size = 22))
+
+          p <- plot(plot.dat.13, center = c, 
+                    colors = wes_palette(pal),
+                    text.size = ts) 
+          p <- p + theme_minimal() 
+          p2 <- p + theme(legend.position = "bottom")
+          
+          p <- p1 + p2 & 
+               theme(axis.title.x = element_blank(),
+               axis.text = element_text(size = 16),
+               legend.title = element_blank(),
+               legend.text = element_text(size = 14),
+               strip.text = element_text(size = 20))
+     return(p)
+     }
+```
+
+```{r Plots by country/year/education}
+     p <- lapply(c("Portugal", "Spain", "Italy", "Greece"), 
+                 likert.country.plot, ts = 4.5, c = 3, pal = "Royal2")
+
+     p.det <- wrap_plots(p, nrow = 4) + 
+              plot_annotation(title = "Number of Cultural Activities by Country and Year") +
+              plot_layout(guides = "collect") &
+              theme(legend.position = "bottom", title = element_text(size = 26))
+          
+     png(file = here("Plots", "cult-cat1-by-year-by-country.png"), 
+         width=1200, height=800)
+          p.det
+     dev.off()
+```
+
+```{r Composite plot}
+     p.list <- list(p.main, p.det)
+     p <- wrap_plots(p.main, p.det, ncol = 1) + 
+          plot_layout(heights = c(1, 5)) 
+     png(file = here("Plots", "cult-cat1-by-year-by-country-combo.png"), 
+         width=1200, height=1100)
+          p
+     dev.off()
+```
+
