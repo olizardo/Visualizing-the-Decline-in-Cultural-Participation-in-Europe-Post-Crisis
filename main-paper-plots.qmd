@@ -223,7 +223,8 @@
 ## Participation Scale
 
 ```{r Likert plot by country/year}
-     plot.dat <- filter(eurobar.bin, year == 2007) %>% 
+     plot.dat <- filter(eurobar.bin, year == 2007, 
+                        educrec != "Still studying") %>% 
           select(country, cult.cat2)
      names(plot.dat) <- c("Country", "2007")
      plot.dat <- likert(plot.dat[2], grouping = plot.dat$Country)
@@ -233,7 +234,8 @@
      p <- p + theme_minimal() 
      p1 <- p + theme(legend.position = "none")
      
-     plot.dat <- filter(eurobar.bin, year == 2013) %>% 
+     plot.dat <- filter(eurobar.bin, year == 2013, 
+                        educrec != "Still studying") %>%
           select(country, cult.cat2)
      names(plot.dat) <- c("Country", "2013")
      plot.dat <- likert(plot.dat[2], grouping = plot.dat$Country)
@@ -253,9 +255,11 @@
 
 ```{r Multiple plots function}
      likert.country.plot2 <- function(w, ts = 4.5, c = 1.5, pal = "Royal1") {
-          plot.dat.07 <- filter(eurobar.bin, year == 2007 & country == w) %>% 
+          plot.dat.07 <- filter(eurobar.bin, year == 2007 & country == w, 
+                        educrec != "Still studying") %>%
                select(cult.cat2, educrec)
-          plot.dat.13 <- filter(eurobar.bin, year == 2013 & country == w) %>% 
+          plot.dat.13 <- filter(eurobar.bin, year == 2013 & country == w, 
+                        educrec != "Still studying") %>%
                select(cult.cat2, educrec)
 
           names(plot.dat.07) <- c("2007", "educrec")
@@ -276,7 +280,9 @@
                     colors = wes_palette(pal),
                     text.size = ts) 
           p <- p + theme_minimal() 
-          p2 <- p + theme(legend.position = "bottom")
+          p <- p + ggtitle(w)
+          p2 <- p + theme(legend.position = "bottom",
+                          plot.title = element_text(size = 22))
           
           p <- p1 + p2 & 
                theme(axis.title.x = element_blank(),
