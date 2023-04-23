@@ -48,8 +48,10 @@
                  "Up to 15" = "No full-time education",
                  "Up to 15" = "DK"),
                across(dance:readbook, as_factor),
-               across(dance:readbook, function(x) {fct_recode(x,
-                                                              "Never" = "Never in the last twelve months", "Never" = "DK")}),
+               across(dance:readbook, function(x) {
+                    fct_recode(x,
+                               "Never" = "Never in the last twelve months", 
+                               "Never" = "DK")}),
                year = "2007")
 ```
 
@@ -103,219 +105,68 @@
 
 ```{r Binarized and scaled data}
     eurobar.bin <- eurobar %>% 
-      mutate(across(dance:readbook, function(x) {if_else(x == "Never", 0, 1)}),
-             cult.sum1 = rowSums(across(dance:readbook)),
-             cult.cat1 = case_when(cult.sum1 == 0 ~ 1,
-                                  cult.sum1 %in% 1:2 ~ 2,
-                                  cult.sum1 %in% 3:4 ~ 3,
-                                  cult.sum1 %in% 5:6 ~ 4,
-                                  cult.sum1 >=7 ~ 5
+          mutate(across(dance:readbook, function(x) {if_else(x == "Never", 0, 1)}),
+                 cult.sum = rowSums(across(c(dance:concert, histmon:visitart))),
+                 cult.cat = case_when(cult.sum == 0 ~ 1,
+                                  cult.sum %in% 1:2 ~ 2,
+                                  cult.sum %in% 3:4 ~ 3,
+                                  cult.sum %in% 5:6 ~ 4
                                   ),
-             cult.sum2 = rowSums(across(c(dance:concert, histmon:visitart))),
-             cult.cat2 = case_when(cult.sum2 == 0 ~ 1,
-                                  cult.sum2 %in% 1:2 ~ 2,
-                                  cult.sum2 %in% 3:4 ~ 3,
-                                  cult.sum2 %in% 5:6 ~ 4
-                                  ),
-             cult.cat1 = factor(cult.cat1, labels = c("0", "1-2", "3-4", "5-6", "7-9")),
-             cult.cat2 = factor(cult.cat2, labels = c("0", "1-2", "3-4", "5-6")),
-             across(dance:readbook, function(x) {factor(x, labels = c("No", "Yes"))})
-             ) %>% 
-        na.omit()
+                 cult.cat = factor(cult.cat, labels = c("0", "1-2", "3-4", "5-6")),
+                 across(c(dance:concert, histmon:visitart), 
+                        function(x) {factor(x, labels = c("No", "Yes"))}) 
+                 ) %>% 
+          dplyr::select(c("country", "year", "cult.cat", "educrec")) %>% 
+          mutate(country_year = interaction(country, year, sep = "_")) %>% 
+          dplyr::filter(educrec != "Still studying") %>% 
+          na.omit()
     summary(eurobar.bin)
 ```
 
 
 # Plots
-## Full Scale
-```{r Likert plot by country/year}
-     plot.dat <- filter(eurobar.bin, year == 2007) %>% 
-          select(country, cult.cat1)
-     names(plot.dat) <- c("Country", "2007")
-     plot.dat <- likert(plot.dat[2], grouping = plot.dat$Country)
-     p <- plot(plot.dat, center = 3, 
-               colors = wes_palette("Royal2"),
-               text.size = 4.5)
-     p <- p + theme_minimal() 
-     p1 <- p + theme(legend.position = "none")
-     
-     plot.dat <- filter(eurobar.bin, year == 2013) %>% 
-          select(country, cult.cat1)
-     names(plot.dat) <- c("Country", "2013")
-     plot.dat <- likert(plot.dat[2], grouping = plot.dat$Country)
-     p <- plot(plot.dat, center = 3, 
-               colors = wes_palette("Royal2"),
-               text.size = 4.5) 
-     p <- p + theme_minimal() 
-     p2 <- p + theme(legend.position = "none", 
-                     axis.line.y = element_blank(),
-                     axis.text.y = element_blank())
-     p.list <- list(p1, p2)
-     p.main1 <- wrap_plots(p.list, nrow = 1) &
-               theme(axis.title.x = element_blank(),
-               axis.text = element_text(size = 16),
-               strip.text = element_text(size = 20))
+
+```{r Generating data for plotting}
+     dat.lhs <- dplyr::filter(eurobar.bin, educrec == "Up to 15")
+     dat.hs <- dplyr::filter(eurobar.bin, educrec == "16-19")
+     dat.uni <- dplyr::filter(eurobar.bin, educrec == "20+")
+     likert.all <- likert(eurobar.bin[3], grouping = eurobar.bin$country_year)
+     likert.lhs <- likert(dat.lhs[3], grouping = dat.lhs$country_year)
+     likert.hs <- likert(dat.hs[3], grouping = dat.hs$country_year)
+     likert.uni <- likert(dat.uni[3], grouping = dat.uni$country_year)
 ```
 
-```{r Multiple plots function}
-     likert.country.plot1 <- function(w, ts = 4.5, c = 3, pal = "Royal2") {
-          plot.dat.07 <- filter(eurobar.bin, year == 2007 & country == w) %>% 
-               select(cult.cat1, educrec)
-          plot.dat.13 <- filter(eurobar.bin, year == 2013 & country == w) %>% 
-               select(cult.cat1, educrec)
-
-          names(plot.dat.07) <- c("2007", "educrec")
-          names(plot.dat.13) <- c("2013", "educrec")
-
-          plot.dat.07 <- likert(plot.dat.07[1], grouping = plot.dat.07$educrec)
-          plot.dat.13 <- likert(plot.dat.13[1], grouping = plot.dat.13$educrec)
-
-          p <- plot(plot.dat.07, center = c, 
-                    colors = wes_palette(pal),
-                    text.size = ts) 
-          p <- p + theme_minimal() 
-          p <- p + ggtitle(w)
-          p1 <- p + theme(legend.position = "none",
-                          plot.title = element_text(size = 22))
-
-          p <- plot(plot.dat.13, center = c, 
-                    colors = wes_palette(pal),
-                    text.size = ts) 
-          p <- p + theme_minimal() 
-          p2 <- p + theme(legend.position = "bottom")
-          
-          p <- p1 + p2 & 
-               theme(axis.title.x = element_blank(),
-               axis.text = element_text(size = 16),
-               legend.title = element_blank(),
-               legend.text = element_text(size = 14),
-               strip.text = element_text(size = 20))
-     return(p)
+```{r Generating plots}
+     plot.dat <- function(x, t = "") {
+       p <- plot(x,
+            colors = wes_palette("Royal1"), center = 1.5, text.size = 3,
+            group.order = c("Portugal_2007","Portugal_2013", 
+                            "Greece_2007", "Greece_2013", 
+                            "Spain_2007", "Spain_2013",
+                            "Italy_2007", "Italy_2013")
+       )
+       p <- p + theme_minimal()
+       p <- p + theme(strip.text = element_blank(), 
+                      legend.title = element_blank(),
+                      legend.position = "bottom",
+                      legend.text = element_text(size = 10),
+                      axis.text = element_text(size = 12))
+       p <- p + labs(y = "", title = t)
+       return(p)
      }
+    p1 <- plot.dat(likert.all, t = "All Respondents")
+    p2 <- plot.dat(likert.lhs, t = "Finished Education at Fifteen or Younger (> High School)")
+    p3 <- plot.dat(likert.hs, t = "Finished Education Between Sixteen and Nineteen (High School)")
+    p4 <- plot.dat(likert.uni, t = "Completed Education at Twenty or Older (University)")
 ```
 
-```{r Plot by country/year/education}
-     p <- lapply(c("Portugal", "Spain", "Italy", "Greece"), 
-                 likert.country.plot1)
-     p.det1 <- wrap_plots(p, nrow = 4) + 
-              plot_annotation(title = "Number of Cultural Activities by Country and Year") +
-              plot_layout(guides = "collect") &
-              theme(legend.position = "bottom", title = element_text(size = 26))
-          
-     png(file = here("Plots", "cult-cat1-by-year-by-country.png"), 
-         width=1200, height=800)
-          p.det1
-     dev.off()
-```
-
-```{r Composite plot}
-     p.list1 <- list(p.main1, p.det1)
-     p <- wrap_plots(p.list1, ncol = 1) + 
-          plot_layout(heights = c(1, 5)) +
-          plot_annotation(tag_levels = "a", tag_suffix = ")") &
-          theme(plot.tag = element_text(size = 22))
-     png(file = here("Plots", "cult-cat1-by-year-by-country-combo.png"), 
-         width=1200, height=1000)
+```{r Combining plots and saving composite plot}
+    p.list <- list(p1, p2, p3, p4)
+    p <- wrap_plots(p.list, ncol = 1) + plot_layout(guides = "collect") &
+      theme(legend.position = "bottom")
+     png(file = here("Plots", "cult-cat-by-year-by-country-combo.png"), 
+         width = 800, height = 800)
           p
      dev.off()
 ```
 
-## Participation Scale
-
-```{r Likert plot by country/year}
-     plot.dat <- filter(eurobar.bin, year == 2007, 
-                        educrec != "Still studying") %>% 
-          select(country, cult.cat2)
-     names(plot.dat) <- c("Country", "2007")
-     plot.dat <- likert(plot.dat[2], grouping = plot.dat$Country)
-     p <- plot(plot.dat, center = 1.5, 
-               colors = wes_palette("Royal1"),
-               text.size = 4.5)
-     p <- p + theme_minimal() 
-     p1 <- p + theme(legend.position = "none")
-     
-     plot.dat <- filter(eurobar.bin, year == 2013, 
-                        educrec != "Still studying") %>%
-          select(country, cult.cat2)
-     names(plot.dat) <- c("Country", "2013")
-     plot.dat <- likert(plot.dat[2], grouping = plot.dat$Country)
-     p <- plot(plot.dat, center = 1.5, 
-               colors = wes_palette("Royal1"),
-               text.size = 4.5) 
-     p <- p + theme_minimal() 
-     p2 <- p + theme(legend.position = "none", 
-                     axis.line.y = element_blank(),
-                     axis.text.y = element_blank())
-     p.list <- list(p1, p2)
-     p.main2 <- wrap_plots(p.list, nrow = 1) &
-               theme(axis.title.x = element_blank(),
-               axis.text = element_text(size = 16),
-               strip.text = element_text(size = 20))
-```
-
-```{r Multiple plots function}
-     likert.country.plot2 <- function(w, ts = 4.5, c = 1.5, pal = "Royal1") {
-          plot.dat.07 <- filter(eurobar.bin, year == 2007 & country == w, 
-                        educrec != "Still studying") %>%
-               select(cult.cat2, educrec)
-          plot.dat.13 <- filter(eurobar.bin, year == 2013 & country == w, 
-                        educrec != "Still studying") %>%
-               select(cult.cat2, educrec)
-
-          names(plot.dat.07) <- c("2007", "educrec")
-          names(plot.dat.13) <- c("2013", "educrec")
-
-          plot.dat.07 <- likert(plot.dat.07[1], grouping = plot.dat.07$educrec)
-          plot.dat.13 <- likert(plot.dat.13[1], grouping = plot.dat.13$educrec)
-
-          p <- plot(plot.dat.07, center = c, 
-                    colors = wes_palette(pal),
-                    text.size = ts) 
-          p <- p + theme_minimal() 
-          p <- p + ggtitle(w)
-          p1 <- p + theme(legend.position = "none",
-                          plot.title = element_text(size = 22))
-
-          p <- plot(plot.dat.13, center = c, 
-                    colors = wes_palette(pal),
-                    text.size = ts) 
-          p <- p + theme_minimal() 
-          p <- p + ggtitle(w)
-          p2 <- p + theme(legend.position = "bottom",
-                          plot.title = element_text(size = 22))
-          
-          p <- p1 + p2 & 
-               theme(axis.title.x = element_blank(),
-               axis.text = element_text(size = 16),
-               legend.title = element_blank(),
-               legend.text = element_text(size = 14),
-               strip.text = element_text(size = 20))
-     return(p)
-     }
-```
-
-```{r Plot by country/year/education}
-     p <- lapply(c("Portugal", "Spain", "Italy", "Greece"), 
-                 likert.country.plot2)
-     p.det2 <- wrap_plots(p, nrow = 4) + 
-              plot_annotation(title = "Number of Cultural Activities by Country and Year") +
-              plot_layout(guides = "collect") &
-              theme(legend.position = "bottom", title = element_text(size = 26))
-          
-     png(file = here("Plots", "cult-cat2-by-year-by-country.png"), 
-         width=1200, height=800)
-          p.det2
-     dev.off()
-```
-
-```{r Composite plot}
-     p.list2 <- list(p.main2, p.det2)
-     p <- wrap_plots(p.list2, ncol = 1) + 
-          plot_layout(heights = c(1, 5)) +
-          plot_annotation(tag_levels = "a", tag_suffix = ")") &
-          theme(plot.tag = element_text(size = 22))
-     png(file = here("Plots", "cult-cat2-by-year-by-country-combo.png"), 
-         width=1200, height=1000)
-          p
-     dev.off()
-```
