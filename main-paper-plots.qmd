@@ -156,7 +156,7 @@
      }
     p1 <- plot.dat(likert.all, t = "All Respondents")
     p2 <- plot.dat(likert.lhs, t = "Finished Education at Fifteen or Younger (> High School)")
-    p3 <- plot.dat(likert.hs, t = "Finished Education Between Sixteen and Nineteen (High School)")
+    p3 <- plot.dat(likert.hs, t = "Finished Education Between Sixteen and Nineteen (High School/Vocational)")
     p4 <- plot.dat(likert.uni, t = "Completed Education at Twenty or Older (University)")
 ```
 
