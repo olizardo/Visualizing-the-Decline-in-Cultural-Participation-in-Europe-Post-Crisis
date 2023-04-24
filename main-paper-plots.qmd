@@ -130,42 +130,47 @@
      dat.lhs <- dplyr::filter(eurobar.bin, educrec == "Up to 15")
      dat.hs <- dplyr::filter(eurobar.bin, educrec == "16-19")
      dat.uni <- dplyr::filter(eurobar.bin, educrec == "20+")
-     likert.all <- likert(eurobar.bin[3], grouping = eurobar.bin$country_year)
-     likert.lhs <- likert(dat.lhs[3], grouping = dat.lhs$country_year)
-     likert.hs <- likert(dat.hs[3], grouping = dat.hs$country_year)
-     likert.uni <- likert(dat.uni[3], grouping = dat.uni$country_year)
 ```
 
+```{r Plotting function}
+    plot.func <- function(c, x) {
+      x <- dplyr::filter(x, country == c)
+      w <- likert(x[3], grouping = x$year)
+      p <- plot(w, colors = wes_palette("Royal1"), center = 1.5, text.size = 3.5,
+               group.order = c("2007", "2013"))
+      p <- p + theme_minimal()
+      p <- p + theme(strip.text = element_blank(), 
+                    legend.title = element_blank(),
+                    legend.position = "bottom",
+                    legend.text = element_text(size = 10),
+                    axis.text = element_text(size = 10),
+                    title = element_text(size = 10))
+      p <- p + labs(y = "", title = c)
+    return(p)
+    }
+    plot.dat <- function(x, t = "") {
+      p.list <- lapply(c("Portugal", "Greece", "Spain", "Italy"), plot.func, x)
+      wrap_plots(p.list, ncol = 1) + 
+        plot_layout(guides = "collect") +
+        plot_annotation(title = t) &
+        theme(legend.position = "bottom")
+      }
+```
+
+
 ```{r Generating plots}
-     plot.dat <- function(x, t = "") {
-       p <- plot(x,
-            colors = wes_palette("Royal1"), center = 1.5, text.size = 3,
-            group.order = c("Portugal_2007","Portugal_2013", 
-                            "Greece_2007", "Greece_2013", 
-                            "Spain_2007", "Spain_2013",
-                            "Italy_2007", "Italy_2013")
-       )
-       p <- p + theme_minimal()
-       p <- p + theme(strip.text = element_blank(), 
-                      legend.title = element_blank(),
-                      legend.position = "bottom",
-                      legend.text = element_text(size = 10),
-                      axis.text = element_text(size = 12))
-       p <- p + labs(y = "", title = t)
-       return(p)
-     }
-    p1 <- plot.dat(likert.all, t = "All Respondents")
-    p2 <- plot.dat(likert.lhs, t = "Finished Education at Fifteen or Younger (> High School)")
-    p3 <- plot.dat(likert.hs, t = "Finished Education Between Sixteen and Nineteen (High School/Vocational)")
-    p4 <- plot.dat(likert.uni, t = "Completed Education at Twenty or Older (University)")
+    p1 <- plot.dat(eurobar.bin, t = "All Respondents")
+    p2 <- plot.dat(dat.lhs, t = "Finished Education at Fifteen or Younger (> High School)")
+    p3 <- plot.dat(dat.hs, t = "Finished Education Between Sixteen and Nineteen (High School/Vocational)")
+    p4 <- plot.dat(dat.uni, t = "Completed Education at Twenty or Older (University)")
 ```
 
 ```{r Combining plots and saving composite plot}
-    p.list <- list(p1, p2, p3, p4)
-    p <- wrap_plots(p.list, ncol = 1) + plot_layout(guides = "collect") &
+    p1 + p2 + p3 + p4 + plot_layout(ncol = 2, widths = c(1, 1))
+
       theme(legend.position = "bottom")
      png(file = here("Plots", "cult-cat-by-year-by-country-combo.png"), 
-         width = 800, height = 800)
+         width = 1200, height = 1000)
           p
      dev.off()
 ```
