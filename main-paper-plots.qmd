@@ -6,11 +6,11 @@
 
 ```{r setup, include=FALSE}
     knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+    library(cowplot)
     library(ggplot2)
     library(haven)
     library(here)
     library(likert)
-    library(patchwork)
     library(tidyverse)
     library(wesanderson)
 ```
@@ -81,25 +81,28 @@
                  "Up to 15" = "No full-time education",
                  "Up to 15" = "DK"),
         across(dance:readbook, as_factor),
-               across(dance:readbook, function(x) {fct_recode(x,
-                                                              "Never" = "Not in the last 12 months", "Never" = "DK")}),
+               across(dance:readbook, function(x) {
+                 fct_recode(x, 
+                            "Never" = "Not in the last 12 months", 
+                            "Never" = "DK")}),
               year = "2013")
 ```
 
 ```{r Merging Data}
     eurobar <- bind_rows(eurobar.07, eurobar.13) %>% 
                     mutate(year = factor(year)) %>% 
-                    #mutate(across(dance:readbook, function(x) ♦{na_if(x, 9)})) %>%
                     mutate(country = as_factor(country)) %>% 
                     mutate(country = fct_recode(country, 
                           "Germany" = "Germany East",
                           "Germany" = "Germany West",
                           "U.K" = "Great Britain",
                           "U.K" = "Northern Ireland")) %>% 
-                filter(country %in% 
+                dplyr::filter(country %in% 
                             c("Spain", "Portugal", "Italy", "Greece")) %>% 
                 mutate(country = droplevels(country)) %>% 
-                mutate(across(dance:readbook, droplevels))
+                mutate(across(dance:readbook, droplevels)) %>% 
+                dplyr::filter(educrec != "Still studying") %>% 
+                dplyr::filter(age >= 25) 
       summary(eurobar)
 ```
 
@@ -118,7 +121,6 @@
                  ) %>% 
           dplyr::select(c("country", "year", "cult.cat", "educrec")) %>% 
           mutate(country_year = interaction(country, year, sep = "_")) %>% 
-          dplyr::filter(educrec != "Still studying") %>% 
           na.omit()
     summary(eurobar.bin)
 ```
@@ -153,25 +155,20 @@
       wrap_plots(p.list, ncol = 1) + 
         plot_layout(guides = "collect") +
         plot_annotation(title = t) &
-        theme(legend.position = "bottom")
+        theme(legend.position = "bottom",
+              title = element_text(size = 12))
       }
 ```
 
 
 ```{r Generating plots}
     p1 <- plot.dat(eurobar.bin, t = "All Respondents")
-    p2 <- plot.dat(dat.lhs, t = "Finished Education at Fifteen or Younger (> High School)")
-    p3 <- plot.dat(dat.hs, t = "Finished Education Between Sixteen and Nineteen (High School/Vocational)")
-    p4 <- plot.dat(dat.uni, t = "Completed Education at Twenty or Older (University)")
-```
-
-```{r Combining plots and saving composite plot}
-    p1 + p2 + p3 + p4 + plot_layout(ncol = 2, widths = c(1, 1))
-
-      theme(legend.position = "bottom")
-     png(file = here("Plots", "cult-cat-by-year-by-country-combo.png"), 
-         width = 1200, height = 1000)
-          p
-     dev.off()
+    p2 <- plot.dat(dat.lhs, t = "Finished Education at Fifteen or Younger")
+    p3 <- plot.dat(dat.hs, t = "Finished Education Between Sixteen and Nineteen")
+    p4 <- plot.dat(dat.uni, t = "Completed Education at Twenty or Older")
+    png(file = here("Plots", "cult-cat-by-year-by-country-combo.png"), 
+        width = 900, height = 900)
+        plot_grid(p1, p2, p3, p4, ncol = 2) 
+    dev.off()
 ```
 
