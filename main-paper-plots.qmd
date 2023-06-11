@@ -145,8 +145,7 @@
                     legend.title = element_blank(),
                     legend.position = "bottom",
                     legend.text = element_text(size = 10),
-                    axis.text = element_text(size = 10),
-                    title = element_text(size = 10))
+                    axis.text = element_text(size = 10))
       p <- p + labs(y = "", title = c)
     return(p)
     }
@@ -156,7 +155,7 @@
         plot_layout(guides = "collect") +
         plot_annotation(title = t) &
         theme(legend.position = "bottom",
-              title = element_text(size = 12))
+              title = element_text(size = 12, color = "grey30"))
       }
 ```
 
@@ -166,7 +165,7 @@
     p2 <- plot.dat(dat.lhs, t = "Finished Education at Fifteen or Younger")
     p3 <- plot.dat(dat.hs, t = "Finished Education Between Sixteen and Nineteen")
     p4 <- plot.dat(dat.uni, t = "Completed Education at Twenty or Older")
-    png(file = here("Plots", "cult-cat-by-year-by-country-combo.png"), 
+    png(file = here("cult-cat-by-year-by-country-combo.png"), 
         width = 900, height = 900)
         plot_grid(p1, p2, p3, p4, ncol = 2) 
     dev.off()
