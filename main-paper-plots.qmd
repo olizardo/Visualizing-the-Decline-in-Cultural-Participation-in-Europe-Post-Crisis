@@ -17,7 +17,7 @@
 # Data Wrangling
 ```{r Reading in Data (2007)}
     eurobar.07 <- read_dta(
-        "C:/Users/Omar Lizardo/Google Drive/MISC DATA SOURCES/Eurobarometer-67-1/eurobar67-1.dta",
+        here("data", "eurobar67-1.dta"),
         col_select = c(V6, V94:V96, V98:V103, V724, V725, V726, V727)) %>% 
         rename(country = V6,
                dance = V94,
@@ -57,7 +57,7 @@
 
 ```{r Reading in Data (2013)}
     eurobar.13 <- read_dta(
-        "C:/Users/Omar Lizardo/Google Drive/MISC DATA SOURCES/Eurobarometer-79-2/eurobar79-2.dta",
+        here("data", "eurobar79-2.dta"),
         col_select = c(COUNTRY, starts_with("QB1_"), D8, D8R2, D10, D11)) %>% 
         rename(country = COUNTRY,
                dance = QB1_1,
@@ -165,7 +165,7 @@
     p2 <- plot.dat(dat.lhs, t = "Finished Education at Fifteen or Younger")
     p3 <- plot.dat(dat.hs, t = "Finished Education Between Sixteen and Nineteen")
     p4 <- plot.dat(dat.uni, t = "Completed Education at Twenty or Older")
-    png(file = here("cult-cat-by-year-by-country-combo.png"), 
+    png(file = here("Plots", "cult-cat-by-year-by-country-combo.png"), 
         width = 900, height = 900)
         plot_grid(p1, p2, p3, p4, ncol = 2) 
     dev.off()
